@@ -1,0 +1,76 @@
+package com.keystore.keystore;
+
+import java.io.File;
+import java.io.IOException;
+import java.security.KeyManagementException;
+import java.security.KeyStoreException;
+import java.security.NoSuchAlgorithmException;
+import java.security.UnrecoverableKeyException;
+import java.security.cert.CertificateException;
+
+import javax.net.ssl.SSLContext;
+
+import org.apache.http.HttpEntity;
+import org.apache.http.client.methods.CloseableHttpResponse;
+import org.apache.http.client.methods.HttpPost;
+import org.apache.http.client.methods.HttpPut;
+import org.apache.http.client.methods.HttpUriRequest;
+import org.apache.http.conn.ssl.SSLConnectionSocketFactory;
+import org.apache.http.impl.client.CloseableHttpClient;
+import org.apache.http.impl.client.HttpClients;
+import org.apache.http.ssl.SSLContexts;
+import org.apache.http.util.EntityUtils;
+
+/**
+ * Hello world!
+ *
+ */
+public abstract class App {
+
+	protected static final SSLConnectionSocketFactory createSslSocketFactory(String trustedKeystore, String keystore)
+			throws Exception {
+
+		File trustedKeystoreFile = new File(trustedKeystore);
+		File keystoreFile = new File(keystore);
+
+		try {
+
+			SSLContext sslcontext = SSLContexts.custom()
+					.loadTrustMaterial(trustedKeystoreFile, "<<trusted_keystore_password>>".toCharArray())
+					.loadKeyMaterial(keystoreFile, "<<keystore_password>>".toCharArray(),
+							"<<original_password_of_PKCS12_file>>".toCharArray())
+					.build();
+
+			return new SSLConnectionSocketFactory(sslcontext, new String[] { "TLSv1.2" }, null,
+					SSLConnectionSocketFactory.getDefaultHostnameVerifier());
+
+		} catch (Exception ex) {
+			throw ex;
+		}
+
+	}
+
+	protected CloseableHttpResponse requestHttps(String urlEndPoint) throws Exception {
+
+		try {
+
+			CloseableHttpClient httpclient = HttpClients.custom()
+					.setSSLSocketFactory(createSslSocketFactory("trusted.jks", "key.jks")).build();
+			// HttpGet httpGet = new
+			// HttpGet("https://ourserver.com/our/endpoint");
+			CloseableHttpResponse response = httpclient.execute(httpClientRequest());
+			HttpEntity entity = response.getEntity();
+			System.out.println(response.getStatusLine());
+			EntityUtils.consume(entity);
+
+			return response;
+
+		} catch (Exception e) {
+			throw e;
+		}
+
+	}
+
+	protected abstract HttpUriRequest httpClientRequest();
+
+}
